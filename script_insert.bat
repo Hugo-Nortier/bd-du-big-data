@@ -1,0 +1,13 @@
+java -jar cassandra-loader -f "%PATH_TO_DATA%/Customer/person_0_0.csv" -host 127.0.0.1 -delim "|" -schema "projetBD.person(id,firstName,lastName,gender,birthday,createDate,locationIP,browserUsed,place)"
+java -jar cassandra-loader -f "%PATH_TO_DATA%/Feedback/Feedback.csv" -host 127.0.0.1 -charsPerColumn 12000 -delim "|" -schema "projetBD.feedback(asin,PersonId,feedback)"
+java -jar cassandra-loader -f "%PATH_TO_DATA%/Product/Product.csv" -host 127.0.0.1 -delim "," -schema "projetBD.product(asin,title,price,imgUrl)"
+java -jar cassandra-loader -f "%PATH_TO_DATA%/Product/BrandByProduct.csv" -host 127.0.0.1 -delim "," -schema "projetBD.brandbyproduct(brand,asin)"
+java -jar cassandra-loader -f "%PATH_TO_DATA%/SocialNetwork/person_hasInterest_tag_0_0.csv" -host 127.0.0.1 -delim "|" -schema "projetBD.person_hasinterest_tag(Personid,Tagid)"
+java -jar cassandra-loader -f "%PATH_TO_DATA%/SocialNetwork/person_knows_person_0_0.csv" -host 127.0.0.1 -delim "|" -schema "projetBD.person_knows_person(Personid,Personid2,CreationDate)"
+java -jar cassandra-loader -f "%PATH_TO_DATA%/SocialNetwork/post_0_0.csv" -host 127.0.0.1 -delim "|" -schema "projetBD.post(id,imageFile,CreationDate,locationIP,browserUsed,language,content,length)"
+java -jar cassandra-loader -f "%PATH_TO_DATA%/SocialNetwork/post_hasCreator_person_0_0.csv" -host 127.0.0.1 -delim "|" -schema "projetBD.post_hascreator_person(Postid,Personid)"
+java -jar cassandra-loader -f "%PATH_TO_DATA%/SocialNetwork/post_hasTag_tag_0_0.csv" -host 127.0.0.1 -delim "|" -schema "projetBD.post_hastag_tag(Postid,Tagid)"
+java -jar cassandra-loader -f "%PATH_TO_DATA%/Vendor/Vendor.csv" -host 127.0.0.1 -delim "," -schema "projetBD.vendor(Vendor,Country,Industry)"
+java -jar cassandra-loader -f "%PATH_TO_DATA%/Order/Order.csv" -host 127.0.0.1 -delim "|" -schema "projetBD.orderBD(OrderId,PersonId,OrderDate,TotalPrice,OrderLine)"
+java -jar cassandra-loader -f "%PATH_TO_DATA%/Order/Order.csv" -host 127.0.0.1 -delim "|" -schema "projetBD.invoice(OrderId,PersonId,OrderDate,TotalPrice,OrderLine)"
+

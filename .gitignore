@@ -1,60 +1,69 @@
-.metadata
+HELP.md
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!moteur/src/test/**/target/
+**/out/
+**/target/
+**/build/
+**/javadoc/
+**/apidocs/
+**/testapidocs/
+
 bin/
-tmp/
-*.tmp
+
+*.class
+*.log
+*.ctxt
+.mtj.tmp/
 *.bak
-*.swp
-*~.nib
-local.properties
-.settings/
-.loadpath
-.recommenders
+*.csv
 
-# External tool builders
-.externalToolBuilders/
+### package Files ###
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+*.gz
 
-# Locally stored "Eclipse launch configurations"
-*.launch
-
-# PyDev specific (Python IDE for Eclipse)
-*.pydevproject
-
-# CDT-specific (C/C++ Development Tooling)
-.cproject
-
-# CDT- autotools
-.autotools
-
-# Java annotation processor (APT)
+### STS ###
+.apt_generated
 .factorypath
-
-# PDT-specific (PHP Development Tools)
-.buildpath
-
-# sbteclipse plugin
-.target
-
-# Tern plugin
-.tern-project
-
-# TeXlipse plugin
-.texlipse
-
-# STS (Spring Tool Suite)
 .springBeans
+.sts4-cache
 
-# Code Recommenders
-.recommenders/
+### MacOS ###
+**/.DS_Store
 
-# Annotation Processing
-.apt_generated/
-.apt_generated_test/
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+.gradle
+**/local.properties
+*.LOG
+*.BAD*
+*.bak
 
-# Scala IDE specific (Scala & Java development for Eclipse)
-.cache-main
-.scala_dependencies
-.worksheet
+### ECLIPSE ###
+**/.project
+**/.classpath
+**/.settings/
+**/.metadata/
+**/.recommanders/
 
-# Uncomment this line if you wish to ignore the project description file.
-# Typically, this file would be tracked if it contains build/dependency configurations:
-#.project
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!moteur/src/test/**/build/
+
+### VS Code ###
+.vscode/
