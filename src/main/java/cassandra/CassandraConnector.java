@@ -1,6 +1,5 @@
-package cassandra;
-
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -46,17 +45,203 @@ public class CassandraConnector {
 				.filter(r -> r.getString(0).equals("projetBD".toLowerCase())).map(r -> r.getString(0))
 				.collect(Collectors.toList());
 
-		//client.getSession().execute("DROP TABLE projetBD.person;");
+		// client.getSession().execute("DROP TABLE projetBD.person;");
 		System.out.println("keyspaces: " + matchedKeyspaces.toString());
 
 		// creation des tables dans la BD si elles n'existent pas déjà
 		createTables(client);
-		
-		result = client.getSession().execute("SELECT * FROM projetBD.person");
-		result.forEach(r->{
-			System.out.println(r.getString("firstname")+" "+r.getString("lastname"));
+
+		// interrogation des données
+		queriesSelect(client);
+
+	}
+
+	public static void queriesSelect(CassandraConnector client) {
+		client.query1();
+		client.query2();
+		client.query3();
+		client.query4();
+
+	}
+
+	// Query 1. For a given customer, find his/her all related data including
+	// profile, orders,invoices,feedback, comments, and posts in the last month,
+	// return the category in which he/she has bought the largest number of
+	// products, and return the tag which he/she has engaged the greatest times in
+	// the posts.
+	public void query1() {
+		String customerid = "2199023256013";
+
+		System.out.println("Query 1");
+
+		System.out.println("Customer id : " + customerid);
+		ResultSet result = this.getSession().execute("SELECT * FROM projetBD.person WHERE id='" + customerid + "'");
+		System.out
+				.println("firstName | lastName | gender | birthday | creationDate | locationIP | browserUsed | place");
+		this.printPeople(result);
+
+		System.out.println("Customer orders :");
+		result = this.getSession().execute("SELECT * FROM projetBD.order WHERE personid='" + customerid
+				+ "' and orderdate > '2021-06-01' and orderdate < '2021-07-01'");
+		this.printOrders(result);
+
+		System.out.println("Customer invoices :");
+		result = this.getSession().execute("SELECT * FROM projetBD.invoice WHERE personid='" + customerid
+				+ "' and orderdate > '2021-06-01' and orderdate < '2021-07-01'");
+		this.printOrders(result);
+
+		System.out.println("Customer feedbacks :");
+		result = this.getSession().execute("SELECT * FROM projetBD.feedback WHERE personid='" + customerid + "'");
+		this.printFeedbacks(result);
+
+		System.out.println("Customer posts :");
+		result = this.getSession()
+				.execute("SELECT * FROM projetBD.post_hascreator_person WHERE personid='" + customerid + "'");
+		this.printPostPerson(result);
+
+		// aucun moyen de retrouver des categories?
+
+		System.out.println(" top tags :");
+		result = this.getSession()
+				.execute("SELECT tagid, COUNT(tagid) as tagcount FROM projetBD.person_hasinterest_tag WHERE personid='" + customerid
+						+ "' ORDER BY tagcount DESC GROUP BY tagid");
+		System.out.println("Customer top tag " + result.all().get(0).getString(0) + " used "
+				+ result.all().get(0).getString(0) + " times.");
+
+	}
+
+	// Query 2. For a given product during a given period, find the people who
+	// commented or posted on it, and had bought it.
+	public void query2() {
+		String productid = "2094869245";
+		String startdate = "2020-01-01";
+		String enddate = "2021-01-01";
+
+		System.out.println("Query 2");
+
+		System.out.println("Product id : " + productid);
+
+		System.out.println("asin | title | price | imgUrl");
+		ResultSet result = this.getSession().execute("SELECT * FROM projetBD.product WHERE asin='" + productid + "'");
+		this.printProduct(result);
+
+		System.out.println("Customers that gave feedback :");
+		result = this.getSession().execute("SELECT * FROM projetBD.feedback WHERE asin='" + productid + "'");
+		System.out
+				.println("firstName | lastName | gender | birthday | creationDate | locationIP | browserUsed | place");
+		result.forEach(r -> {
+			ResultSet resprod = this.getSession()
+					.execute("SELECT * FROM projetBD.person WHERE id='" + r.getString("personid") + "'");
+			this.printPeople(resprod);
 		});
+
+		System.out.println("Customers that bought the product :");
+		result = this.getSession().execute("SELECT * FROM projetBD.order WHERE orderline CONTAINS'" + productid
+				+ "' AND orderdate > '" + startdate + "' AND orderdate < '" + enddate + "'");
+		System.out
+				.println("firstName | lastName | gender | birthday | creationDate | locationIP | browserUsed | place");
+		result.forEach(r -> {
+			ResultSet resprod = this.getSession()
+					.execute("SELECT * FROM projetBD.person WHERE id='" + r.getString("personid") + "'");
+			this.printPeople(resprod);
+		});
+
+	}
+
+	// Query 3. For a given product during a given period, find people who have
+	// undertaken activities related to it, e.g., posts, comments, and review, and
+	// return sentences from these texts that contain negative sentiments.
+	public void query3() {
+		String productid = "2094869245";
+
+		System.out.println("Query 3");
+
+		System.out.println("Product id : " + productid);
+
+		System.out.println("asin | title | price | imgUrl");
+		ResultSet result = this.getSession().execute("SELECT * FROM projetBD.product WHERE asin='" + productid + "'");
+		this.printProduct(result);
+
+		System.out.println("Negative feedback :");
+		result = this.getSession().execute("SELECT * FROM projetBD.feedback WHERE asin='" + productid + "'");
+		this.printNegativeFeedbacks(result);
+	}
+
+	// Query 4. Find the top-2 persons who spend the highest amount of money in
+	// orders. Then for each person, traverse her knows-graph with 3-hop to find the
+	// friends, and finally return the common friends of these two persons.
+	public void query4() {
+
+		System.out.println("Query 4");
+
+		System.out.println("Top 2 people sorted by most spending :");
+
+		ResultSet result = this.getSession().execute("SELECT personid, sum(totalprice) as sumtot FROM projetBD.order GROUP BY personid ORDER BY sumtot DESC");
+		System.out.println("Customer " + result.all().get(0).getString(0) + " spent "
+				+ result.all().get(0).getDouble(0) + " total.");
 		
+		System.out.println("Customer " + result.all().get(1).getString(0) + " spent "
+				+ result.all().get(1).getDouble(0) + " total.");
+		
+		this.printProduct(result);
+		
+		//graphs pas disponibles sur cassandra
+		
+	}
+
+	private void printPostPerson(ResultSet result) {
+		System.out.println("asin | title | price | imgUrl");
+		result.forEach(r -> {
+			ResultSet resprod = this.getSession()
+					.execute("SELECT * FROM projetBD.product WHERE asin='" + r.getString("postid") + "'");
+			this.printProduct(resprod);
+		});
+	}
+
+	private void printProduct(ResultSet result) {
+
+		result.forEach(r -> {
+			System.out.println(r.getString("asin") + " | " + r.getString("title") + " | " + r.getInt("price") + " | "
+					+ r.getString("imgurl"));
+		});
+	}
+
+	private void printFeedbacks(ResultSet result) {
+		System.out.println("asin | personid | feedback");
+		result.forEach(r -> {
+			System.out.println(r.getString("asin") + " | " + r.getString("personid") + " | " + r.getString("feedback"));
+		});
+
+	}
+
+	private void printNegativeFeedbacks(ResultSet result) {
+		System.out.println(" personid | feedback");
+		result.forEach(r -> {
+			String rating = r.getString("feedback").split(",", 1)[0];
+			String feedback = r.getString("feedback").split(",", 1)[1];
+			if (rating.equals("1.0"))
+				System.out.println(r.getString("personid") + " | " + r.getString("feedback"));
+		});
+
+	}
+
+	public void printPeople(ResultSet result) {
+		result.forEach(r -> {
+			System.out.println(r.getString("firstname") + " | " + r.getString("lastname") + " | "
+					+ r.getString("gender") + " | " + r.getDate("birthday").toString() + " | "
+					+ r.getDate("creationdate").toString() + " | " + r.getString("locationip") + " | "
+					+ r.getString("browserused") + " | " + r.getInt("place"));
+		});
+	}
+
+	public void printOrders(ResultSet result) {
+
+		System.out.println("OrderId | PersonId | OrderDate | TotalPrice | OrderLine ");
+		result.forEach(r -> {
+			System.out.println(r.getString("orderid") + " | " + r.getString("personid") + " | "
+					+ r.getDate("orderdate").toString() + " | " + r.getDouble("totalprice") + " | "
+					+ Arrays.toString(r.getSet("orderline", String.class).toArray()));
+		});
 	}
 
 	public static void createTables(CassandraConnector client) {
