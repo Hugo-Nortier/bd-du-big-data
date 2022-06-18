@@ -66,9 +66,12 @@ public class CassandraConnector {
         // creation des tables dans la BD si elles n'existent pas déjà
         //createTables(client);
 
-        deleteRows(client,"product"," asin IN ('B00KCPUHQU','B00KS73CPU')");
+        //deleteRows(client,"product"," asin IN ('B00KCPUHQU','B00KS73CPU')");
+
+        //insertRows(client, "feedback", new String[]{"asin", "PersonId", "feedback"}, new String[]{"LCJTMDF", "55551445256", "5.0, was very cool and fun to play with this"});
+
         // interrogation des données
-        //queriesSelect(client);
+        queriesSelect(client);
         System.exit(0);
     }
 
@@ -89,14 +92,42 @@ public class CassandraConnector {
         System.out.println("\n\u001B[36m Dans delete enregistrement(s) \n\u001B[0m");
         try{
             ResultSet result;
+            result = client.getSession().execute("SELECT COUNT(*) FROM projetBD."+table+";");
+            System.out.println("Nb d'enregistrements de la table "+table+": "+result.one().getLong(0));
 			if(conditionWhere!="")
                 result = client.getSession().execute("DELETE FROM projetBD."+table+" WHERE "+conditionWhere+";");
             else
                 result = client.getSession().execute("DELETE FROM projetBD."+table+";");
             System.out.println("Suppression s'est exécutée? result.wasApplied()="+result.wasApplied());
-
+            result = client.getSession().execute("SELECT COUNT(*) FROM projetBD."+table+";");
+            System.out.println("Nb d'enregistrements de la table après suppression "+table+": "+result.one().getLong(0));
         } catch (InvalidQueryException exception){
             System.err.println("Table "+table+" n'existe pas OU erreur clause where: "+conditionWhere);
+        }
+    }
+
+    public static void insertRows(CassandraConnector client, String table, String[] columns, String[] values){
+        System.out.println("\n\u001B[36m Dans insert enregistrement(s) \n\u001B[0m");
+        try{
+            ResultSet result;
+            result = client.getSession().execute("SELECT COUNT(*) FROM projetBD."+table+";");
+            System.out.println("Nb d'enregistrements de la table "+table+": "+result.one().getLong(0));
+
+            String row=" (";
+            for(int i=0;i< columns.length-1;i++)
+                row+=columns[i]+", ";
+            row+=columns[columns.length-1]+") VALUES (";
+            for(int i=0;i< values.length-1;i++)
+                row+="'"+values[i]+"',";
+            row+="'"+values[values.length-1]+"') IF NOT EXISTS";
+            System.out.println("INSERT into projetBD."+table+" "+row);
+            result = client.getSession().execute("INSERT into projetBD."+table+" "+row);
+
+            System.out.println("Insertion s'est exécutée? result.wasApplied()="+result.wasApplied());
+            result = client.getSession().execute("SELECT COUNT(*) FROM projetBD."+table+";");
+            System.out.println("Nb d'enregistrements de la table après insertion "+table+": "+result.one().getLong(0));
+        } catch (InvalidQueryException exception){
+            System.err.println("Table "+table+" n'existe pas");
         }
     }
 
@@ -109,7 +140,7 @@ public class CassandraConnector {
 		client.query6();
 		client.query7();
 		client.query8();
-		client.query9();
+		//client.query9();
 		client.query10();
     }
 
@@ -119,7 +150,7 @@ public class CassandraConnector {
     // products, and return the tag which he/she has engaged the greatest times in
     // the posts.
     public void query1() {
-        System.out.println("\n\u001B[36m Dans Query 1 \n\u001B[0m");
+        System.out.println("\n\u001B[36m Dans Query 1 \u001B[0m");
         String customerid = "8796093023175";
         System.out.println("\n\u001B[32m Customer id : " + customerid+" \n\u001B[0m");
 
@@ -128,38 +159,37 @@ public class CassandraConnector {
                 .println("firstName | lastName | gender | birthday | createDate | locationIP | browserUsed | place");
         this.printPeople(result);
 
-        System.out.println("\nCustomer orders :\n");
+        System.out.println("\n\u001B[32m Customer orders :\n\u001B[0m");
         result = this.getSession().execute("SELECT * FROM projetBD.orderBD WHERE personid='" + customerid
                 + "' and orderdate > '2022-06-01' and orderdate < '2022-07-01' ALLOW FILTERING");
         this.printOrders(result);
 
-        System.out.println("\nCustomer invoices :\n");
+        System.out.println("\n\u001B[32m Customer invoices :\n\u001B[0m");
         result = this.getSession().execute("SELECT * FROM projetBD.invoice WHERE personid='" + customerid
                 + "' and orderdate > '2022-06-01' and orderdate < '2022-07-01' ALLOW FILTERING");
         this.printOrders(result);
 
-        System.out.println("Customer feedbacks :");
+        System.out.println("\n\u001B[32m Customer feedbacks :\n\u001B[0m");
         //result = this.getSession().execute("SELECT * FROM projetBD.feedback WHERE personid='" + customerid + "' ALLOW FILTERING");
 
         result = this.getSession().execute("SELECT * FROM projetBD.feedback WHERE personid='" + "4184" + "' ALLOW FILTERING");
         this.printFeedbacks(result);
 
-        System.out.println("Customer posts :");
+        System.out.println("\n\u001B[32m Customer posts :\n\u001B[0m");
         result = this.getSession()
                 .execute("SELECT * FROM projetBD.post_hascreator_person WHERE personid='" + customerid + "' ALLOW FILTERING");
         this.printPostPerson(result);
 
         // aucun moyen de retrouver des categories?
 
-        System.out.println(" top tags :");
+        System.out.println("\n\u001B[32m Customer top tags :\n\u001B[0m");
         result = this.getSession()
                 .execute("SELECT tagid, COUNT(tagid) FROM projetBD.person_hasinterest_tag WHERE personid='" + customerid
                         + "' GROUP BY tagid ALLOW FILTERING");
         result.forEach(r -> {
-            System.out.println("Customer top tag " + r.getString("tagid") + " used "
+            System.out.println("tag " + r.getString("tagid") + " used "
                     + r.getLong(1) + " times.");
         });
-
     }
 
     // Query 2. For a given product during a given period, find the people who
@@ -169,7 +199,7 @@ public class CassandraConnector {
         String startdate = "2020-01-01";
         String enddate = "2021-01-01";
 
-        System.out.println("\n\u001B[36m Dans Query 2 \n\u001B[0m");
+        System.out.println("\n\u001B[36m Dans Query 2 \u001B[0m");
 
         System.out.println("\n\u001B[32m Product id : " + productid+" \n\u001B[0m");
 
@@ -177,7 +207,7 @@ public class CassandraConnector {
         ResultSet result = this.getSession().execute("SELECT * FROM projetBD.product WHERE asin='" + productid + "' ALLOW FILTERING");
         this.printProduct(result);
 
-        System.out.println("Customers that gave feedback :");
+        System.out.println("\n\u001B[32m Customer that fave feedback :\n\u001B[0m");
         result = this.getSession().execute("SELECT * FROM projetBD.feedback WHERE asin='" + productid + "' ALLOW FILTERING");
         System.out
                 .println("firstName | lastName | gender | birthday | createDate | locationIP | browserUsed | place");
@@ -187,7 +217,7 @@ public class CassandraConnector {
             this.printPeople(resprod);
         });
 
-        System.out.println("Customers that bought the product :");
+        System.out.println("\n\u001B[32m Customer that bought the product :\n\u001B[0m");
         result = this.getSession().execute("SELECT * FROM projetBD.orderBD WHERE orderline CONTAINS'" + productid
                 + "' AND orderdate > '" + startdate + "' AND orderdate < '" + enddate + "' ALLOW FILTERING");
         System.out
@@ -197,7 +227,6 @@ public class CassandraConnector {
                     .execute("SELECT * FROM projetBD.person WHERE id='" + r.getString("personid") + "' ALLOW FILTERING");
             this.printPeople(resprod);
         });
-
     }
 
     // Query 3. For a given product during a given period, find people who have
@@ -206,7 +235,7 @@ public class CassandraConnector {
     public void query3() {
         String productid = "B001F0J2JO";
 
-        System.out.println("\n\u001B[36m Dans Query 3 \n\u001B[0m");
+        System.out.println("\n\u001B[36m Dans Query 3 \u001B[0m");
 
         System.out.println("\n\u001B[32m Product id : " + productid+" \n\u001B[0m");
 
@@ -214,7 +243,8 @@ public class CassandraConnector {
         ResultSet result = this.getSession().execute("SELECT * FROM projetBD.product WHERE asin='" + productid + "' ALLOW FILTERING");
         this.printProduct(result);
 
-        System.out.println("Negative feedback :");
+        System.out.println("\n\u001B[32m Negative feedback :\n\u001B[0m");
+
         result = this.getSession().execute("SELECT * FROM projetBD.feedback WHERE asin='" + productid + "' ALLOW FILTERING");
         this.printNegativeFeedbacks(result);
     }
@@ -224,7 +254,7 @@ public class CassandraConnector {
     // friends, and finally return the common friends of these two persons.
     public void query4() {
 
-        System.out.println("\n\u001B[36m Dans Query 2 \n\u001B[0m");
+        System.out.println("\n\u001B[36m Dans Query 4 \u001B[0m");
 
         System.out.println("\n\u001B[32m Top 2 people sorted by most spending : \n\u001B[0m");
 
@@ -246,7 +276,9 @@ public class CassandraConnector {
 				.execute("SELECT personid2 FROM projetBD.person_knows_person where personid='"
 						+ resultAll.get(1).getString(0) + "' ALLOW FILTERING");
 
-		System.out.println("Common friends (1 hop) :" + this.findCommonFriends(result.all(), result2.all()).toString());
+        System.out.println("\n\u001B[32m Common friends (1 hop): \n\u001B[0m");
+
+        System.out.println(this.findCommonFriends(result.all(), result2.all()).toString());
 
     }
     
@@ -256,18 +288,22 @@ public class CassandraConnector {
  	// with the 5-rating review of those bought products.
  	public void query5() {
 
- 		// pas de possibilité de retrouver des categories...
- 	}
+        System.out.println("\n\u001B[36m Dans Query 5 \u001B[0m");
+
+        System.out.println("\n\u001B[32m Pas de possibilité de retrouver des catégories : \n\u001B[0m");
+    }
 
  	// Query 6. Given customer 1 and customer 2, find persons in the shortest path
  	// between them in the subgraph, and return the TOP 3 best sellers from all
  	// these persons' purchases.
  	public void query6() {
 
- 		System.out.println("Query 6");
+        System.out.println("\n\u001B[36m Dans Query 6 \u001B[0m");
 
- 		String customer1 = "8796093023175";
+        String customer1 = "8796093023175";
  		String customer2 = "13194139536445";
+        System.out.println("\n\u001B[32m Customer id #1: " + customer1+" \u001B[0m");
+        System.out.println("\u001B[32m Customer id #2: " + customer2+" \n\u001B[0m");
 
  		ResultSet result = this.getSession()
  				.execute("SELECT personid2 FROM projetBD.person_knows_person where personid='" + customer1
@@ -279,8 +315,7 @@ public class CassandraConnector {
 
  		ArrayList<String> people = this.findCommonFriends(result.all(), result2.all());
 
- 		System.out.println(
- 				"Common friends (1 hop) of customer " + customer1 + " and customer " + customer2 + ":\n" + people);
+        System.out.println("\n\u001B[32m Common friends (1 hop) of customer " + customer1 + " and customer " + customer2 + ":\n\u001B[0m" + people+" \n");
 
  		LinkedHashMap<String, Integer> topsellers = new LinkedHashMap<>();
 
@@ -298,8 +333,8 @@ public class CassandraConnector {
  				}
  			});
  		}
+        System.out.println("\n\u001B[32m Top 3 sellers: \n\u001B[0m");
 
- 		System.out.println("top 3 sellers:");
  		LinkedHashMap<String, Integer> sortedsell = this.sortMap(topsellers);
  		List<String> keys = new ArrayList<>(sortedsell.keySet());
  		for (int i = 0; i < 3; i++) {
@@ -313,11 +348,11 @@ public class CassandraConnector {
  	// any negative sentiments.
  	public void query7() {
 
- 		System.out.println("Query 7");
-
+        System.out.println("\n\u001B[36m Dans Query 7 \u001B[0m");
  		String brand = "Pirma";
+        System.out.println("\n\u001B[32m Brand: " + brand+" \n\u001B[0m");
 
- 		System.out.println("Checking negative feedbacks of \"" + brand + "\"'s products:");
+        System.out.println("\n\u001B[32m Checking negative feedbacks of \"" + brand + "\"'s products: \n\u001B[0m");
 
  		ResultSet result = this.getSession()
  				.execute("SELECT asin FROM projetBD.brandbyproduct where brand='" + brand + "' ALLOW FILTERING");
@@ -333,17 +368,19 @@ public class CassandraConnector {
  	// compute its total sales amount, and measure its popularity in the social
  	// media.
  	public void query8() {
- 		// toujours pas de categories :(
- 	}
+        System.out.println("\n\u001B[36m Dans Query 8 \u001B[0m");
+        System.out.println("\n\u001B[32m Pas de possibilité de retrouver des catégories : \n\u001B[0m");
+    }
 
  	// Query 9. Find top-3 companies who have the largest amount of sales at one
  	// country, for each company, compare the number of the male and female
  	// customers, and return the most recent posts of them.
  	public void query9() {
 
- 		System.out.println("Query 9");
+        System.out.println("\n\u001B[36m Dans Query 9 \u001B[0m");
 
  		String country = "Italy";
+        System.out.println("\n\u001B[32m Country: " + country+" \n\u001B[0m");
 
  		LinkedHashMap<String, Integer> topsellers = new LinkedHashMap<>();
 
@@ -375,7 +412,8 @@ public class CassandraConnector {
  			});
  		});
 
- 		System.out.println("top 3 selling companies in " + country + ":");
+        System.out.println("\n\u001B[32m Top 3 selling companies in "+country+": \n\u001B[0m");
+
  		LinkedHashMap<String, Integer> sortedsell = this.sortMap(topsellers);
  		List<String> keys = new ArrayList<>(sortedsell.keySet());
  		for (int i = 0; i < 3; i++) {
@@ -389,9 +427,9 @@ public class CassandraConnector {
  	// in the same period, and return their recent reviews and tags of interest.
  	public void query10() {
 
- 		System.out.println("Query 10");
+        System.out.println("\n\u001B[36m Dans Query 10 \u001B[0m");
 
- 		System.out.println("Top 10 active people on forums :");
+        System.out.println("\n\u001B[32m Top 10 active people on forums: \n\u001B[0m");
 
  		ResultSet result = this.getSession()
  				.execute("SELECT personid, count(postid) FROM projetBD.post_hascreator_person GROUP BY personid");
