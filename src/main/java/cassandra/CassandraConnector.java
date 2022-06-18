@@ -10,6 +10,7 @@ import com.datastax.driver.core.Cluster.Builder;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.Row;
+import com.datastax.driver.core.exceptions.InvalidQueryException;
 
 public class CassandraConnector {
 
@@ -17,6 +18,11 @@ public class CassandraConnector {
 
     private Session session;
 
+    /**
+     *  Connexion à cassandra
+     * @param node
+     * @param port
+     */
     public void connect(String node, Integer port) {
         Builder b = Cluster.builder().addContactPoint(node);
         if (port != null) {
@@ -48,23 +54,52 @@ public class CassandraConnector {
                 .filter(r -> r.getString(0).equals("projetBD".toLowerCase())).map(r -> r.getString(0))
                 .collect(Collectors.toList());
 
-        //client.getSession().execute("DROP TABLE projetBD.orderBD;");
-        System.out.println("keyspaces: " + matchedKeyspaces.toString());
+        // ici on drop les tables, placer les String des tables à supprimer dans tableToDrop
+        //dropTables(client, "person","feedback","product","brandbyproduct","vendor","person_hasinterest_tag","person_knows_person","post","post_hascreator_person","post_hastag_tag","orderBD","invoice");
+
+        System.out.println("\n\u001B[36m keyspaces: " + matchedKeyspaces.toString()+"\n\u001B[0m");
 
         // creation des tables dans la BD si elles n'existent pas déjà
         //createTables(client);
 
+        deleteRows(client,"product"," asin IN ('B00KCPUHQU','B00KS73CPU')");
         // interrogation des données
-        queriesSelect(client);
+        //queriesSelect(client);
         System.exit(0);
     }
 
-    public static void queriesSelect(CassandraConnector client) {
-        //client.query1();
-        //client.query2();
-        //client.query3();
-        client.query4();
+    public static void dropTables(CassandraConnector client, String... tableToDrop){
+        System.out.println("\n\u001B[36m Dans drop tables \n\u001B[0m");
 
+        for (int i = 0; i < tableToDrop.length; i++){
+            try{
+                client.getSession().execute("DROP TABLE projetBD."+tableToDrop[i]+";");
+                System.out.println("Table "+tableToDrop[i]+" a été supprimée");
+            } catch (InvalidQueryException exception){
+                System.err.println("Table "+tableToDrop[i]+" n'existe pas");
+            }
+        }
+    }
+
+    public static void deleteRows(CassandraConnector client, String table, String conditionWhere){
+        System.out.println("\n\u001B[36m Dans delete enregistrement(s) \n\u001B[0m");
+        try{
+            if(conditionWhere!="")
+                ResultSet result = client.getSession().execute("DELETE FROM projetBD."+table+" WHERE "+conditionWhere+";");
+            else
+                ResultSet result = client.getSession().execute("DELETE FROM projetBD."+table+";");
+            System.out.println("Suppression s'est exécutée? result.wasApplied()="+result.wasApplied());
+
+        } catch (InvalidQueryException exception){
+            System.err.println("Table "+table+" n'existe pas OU erreur clause where: "+conditionWhere);
+        }
+    }
+
+    public static void queriesSelect(CassandraConnector client) {
+        client.query1();
+        client.query2();
+        client.query3();
+        client.query4();
     }
 
     // Query 1. For a given customer, find his/her all related data including
@@ -73,11 +108,10 @@ public class CassandraConnector {
     // products, and return the tag which he/she has engaged the greatest times in
     // the posts.
     public void query1() {
+        System.out.println("\n\u001B[36m Dans Query 1 \n\u001B[0m");
         String customerid = "8796093023175";
+        System.out.println("\n\u001B[32m Customer id : " + customerid+" \n\u001B[0m");
 
-        System.out.println("Query 1");
-
-        System.out.println("Customer id : " + customerid);
         ResultSet result = this.getSession().execute("SELECT * FROM projetBD.person WHERE id='" + customerid + "'");
         System.out
                 .println("firstName | lastName | gender | birthday | createDate | locationIP | browserUsed | place");
@@ -124,9 +158,9 @@ public class CassandraConnector {
         String startdate = "2020-01-01";
         String enddate = "2021-01-01";
 
-        System.out.println("Query 2");
+        System.out.println("\n\u001B[36m Dans Query 2 \n\u001B[0m");
 
-        System.out.println("Product id : " + productid);
+        System.out.println("\n\u001B[32m Product id : " + productid+" \n\u001B[0m");
 
         System.out.println("asin | title | price | imgUrl");
         ResultSet result = this.getSession().execute("SELECT * FROM projetBD.product WHERE asin='" + productid + "' ALLOW FILTERING");
@@ -161,9 +195,9 @@ public class CassandraConnector {
     public void query3() {
         String productid = "B001F0J2JO";
 
-        System.out.println("Query 3");
+        System.out.println("\n\u001B[36m Dans Query 3 \n\u001B[0m");
 
-        System.out.println("Product id : " + productid);
+        System.out.println("\n\u001B[32m Product id : " + productid+" \n\u001B[0m");
 
         System.out.println("asin | title | price | imgUrl");
         ResultSet result = this.getSession().execute("SELECT * FROM projetBD.product WHERE asin='" + productid + "' ALLOW FILTERING");
@@ -179,9 +213,9 @@ public class CassandraConnector {
     // friends, and finally return the common friends of these two persons.
     public void query4() {
 
-        System.out.println("Query 4");
+        System.out.println("\n\u001B[36m Dans Query 2 \n\u001B[0m");
 
-        System.out.println("Top 2 people sorted by most spending :");
+        System.out.println("\n\u001B[32m Top 2 people sorted by most spending : \n\u001B[0m");
 
         ResultSet result = this.getSession().execute("SELECT personid, sum(totalprice) FROM projetBD.orderBD GROUP BY personid");
         System.out.println();
@@ -263,6 +297,7 @@ public class CassandraConnector {
     }
 
     public static void createTables(CassandraConnector client) {
+        System.out.println("\n\u001B[36m Dans create tables \n\u001B[0m");
 
         // create table person
         ArrayList<String> variables = new ArrayList<>();
@@ -277,6 +312,7 @@ public class CassandraConnector {
         variables.add("place int");
         client.createTable("projetBD", "person", variables);
         client.showTable("projetBD", "person");
+        System.out.println("Table 'person' a été créée");
 
         // create table feedback
         variables = new ArrayList<>();
@@ -285,6 +321,7 @@ public class CassandraConnector {
         variables.add("feedback text");
         client.createTable("projetBD", "feedback", variables);
         client.showTable("projetBD", "feedback");
+        System.out.println("Table 'feedback' a été créée");
 
         // create table product
         variables = new ArrayList<>();
@@ -292,36 +329,36 @@ public class CassandraConnector {
         variables.add("title text");
         variables.add("price int");
         variables.add("imgUrl text");
-
         client.createTable("projetBD", "product", variables);
         client.showTable("projetBD", "product");
+        System.out.println("Table 'product' a été créée");
 
         // create table brandbyproduct
         variables = new ArrayList<>();
         variables.add("brand text");
         variables.add("asin text");
         variables.add("PRIMARY KEY (brand, asin)");
-
         client.createTable("projetBD", "brandbyproduct", variables);
         client.showTable("projetBD", "brandbyproduct");
+        System.out.println("Table 'brandbyproduct' a été créée");
 
         // create table vendor
         variables = new ArrayList<>();
         variables.add("Vendor text PRIMARY KEY");
         variables.add("Country text");
         variables.add("Industry text");
-
         client.createTable("projetBD", "vendor", variables);
         client.showTable("projetBD", "vendor");
+        System.out.println("Table 'vendor' a été créée");
 
         // create table person_hasinterest_tag
         variables = new ArrayList<>();
         variables.add("Personid text");
         variables.add("Tagid text");
         variables.add("PRIMARY KEY (Personid, Tagid)");
-
         client.createTable("projetBD", "person_hasinterest_tag", variables);
         client.showTable("projetBD", "person_hasinterest_tag");
+        System.out.println("Table 'person_hasinterest_tag' a été créée");
 
         // create table person_knows_person
         variables = new ArrayList<>();
@@ -329,9 +366,9 @@ public class CassandraConnector {
         variables.add("Personid2 text");
         variables.add("CreationDate date");
         variables.add("PRIMARY KEY (Personid, Personid2)");
-
         client.createTable("projetBD", "person_knows_person", variables);
         client.showTable("projetBD", "person_knows_person");
+        System.out.println("Table 'person_knows_person' a été créée");
 
         // create table post
         variables = new ArrayList<>();
@@ -343,27 +380,27 @@ public class CassandraConnector {
         variables.add("language text");
         variables.add("content text");
         variables.add("length int");
-
         client.createTable("projetBD", "post", variables);
         client.showTable("projetBD", "post");
+        System.out.println("Table 'post' a été créée");
 
         // create table post_hascreator_person
         variables = new ArrayList<>();
         variables.add("Postid text");
         variables.add("Personid text");
         variables.add("PRIMARY KEY (Postid, Personid)");
-
         client.createTable("projetBD", "post_hascreator_person", variables);
         client.showTable("projetBD", "post_hascreator_person");
+        System.out.println("Table 'post_hascreator_person' a été créée");
 
         // create table post_hastag_tag
         variables = new ArrayList<>();
         variables.add("Postid text");
         variables.add("Tagid text");
         variables.add("PRIMARY KEY (Postid, Tagid)");
-
         client.createTable("projetBD", "post_hastag_tag", variables);
         client.showTable("projetBD", "post_hastag_tag");
+        System.out.println("Table 'post_hastag_tag' a été créée");
 
         // create table order
         variables = new ArrayList<>();
@@ -373,10 +410,9 @@ public class CassandraConnector {
         variables.add("TotalPrice decimal");
         variables.add("OrderLine set<text>");
         variables.add("PRIMARY KEY (PersonId,OrderId)");
-
-
         client.createTable("projetBD", "orderBD", variables);
         client.showTable("projetBD", "orderBD");
+        System.out.println("Table 'order' a été créée");
 
         // create table invoice
         variables = new ArrayList<>();
@@ -385,10 +421,9 @@ public class CassandraConnector {
         variables.add("OrderDate date");
         variables.add("TotalPrice decimal");
         variables.add("OrderLine set<text>");
-
         client.createTable("projetBD", "invoice", variables);
         client.showTable("projetBD", "invoice");
-
+        System.out.println("Table 'invoice' a été créée");
     }
 
     private void showTable(String keyspace, String table) {
