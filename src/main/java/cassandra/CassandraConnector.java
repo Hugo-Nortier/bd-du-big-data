@@ -2,7 +2,11 @@ package cassandra;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import com.datastax.driver.core.Cluster;
@@ -84,10 +88,11 @@ public class CassandraConnector {
     public static void deleteRows(CassandraConnector client, String table, String conditionWhere){
         System.out.println("\n\u001B[36m Dans delete enregistrement(s) \n\u001B[0m");
         try{
-            if(conditionWhere!="")
-                ResultSet result = client.getSession().execute("DELETE FROM projetBD."+table+" WHERE "+conditionWhere+";");
+            ResultSet result;
+			if(conditionWhere!="")
+                result = client.getSession().execute("DELETE FROM projetBD."+table+" WHERE "+conditionWhere+";");
             else
-                ResultSet result = client.getSession().execute("DELETE FROM projetBD."+table+";");
+                result = client.getSession().execute("DELETE FROM projetBD."+table+";");
             System.out.println("Suppression s'est exécutée? result.wasApplied()="+result.wasApplied());
 
         } catch (InvalidQueryException exception){
@@ -100,6 +105,12 @@ public class CassandraConnector {
         client.query2();
         client.query3();
         client.query4();
+		client.query5();
+		client.query6();
+		client.query7();
+		client.query8();
+		client.query9();
+		client.query10();
     }
 
     // Query 1. For a given customer, find his/her all related data including
@@ -228,9 +239,198 @@ public class CassandraConnector {
 
         this.printProduct(result);
 
-        //graphs pas disponibles sur cassandra
+        result = this.getSession().execute("SELECT personid2 FROM projetBD.person_knows_person where personid='"
+				+ resultAll.get(0).getString(0) + "' ALLOW FILTERING");
+
+		ResultSet result2 = this.getSession()
+				.execute("SELECT personid2 FROM projetBD.person_knows_person where personid='"
+						+ resultAll.get(1).getString(0) + "' ALLOW FILTERING");
+
+		System.out.println("Common friends (1 hop) :" + this.findCommonFriends(result.all(), result2.all()).toString());
 
     }
+    
+ // Query 5. Given a start customer and a product category, find persons who are
+ 	// this customer's friends within 3-hop friendships in Knows graph, besides,
+ 	// they have bought products in the given category. Finally, return feedback
+ 	// with the 5-rating review of those bought products.
+ 	public void query5() {
+
+ 		// pas de possibilité de retrouver des categories...
+ 	}
+
+ 	// Query 6. Given customer 1 and customer 2, find persons in the shortest path
+ 	// between them in the subgraph, and return the TOP 3 best sellers from all
+ 	// these persons' purchases.
+ 	public void query6() {
+
+ 		System.out.println("Query 6");
+
+ 		String customer1 = "8796093023175";
+ 		String customer2 = "13194139536445";
+
+ 		ResultSet result = this.getSession()
+ 				.execute("SELECT personid2 FROM projetBD.person_knows_person where personid='" + customer1
+ 						+ "' ALLOW FILTERING");
+
+ 		ResultSet result2 = this.getSession()
+ 				.execute("SELECT personid2 FROM projetBD.person_knows_person where personid='" + customer2
+ 						+ "' ALLOW FILTERING");
+
+ 		ArrayList<String> people = this.findCommonFriends(result.all(), result2.all());
+
+ 		System.out.println(
+ 				"Common friends (1 hop) of customer " + customer1 + " and customer " + customer2 + ":\n" + people);
+
+ 		LinkedHashMap<String, Integer> topsellers = new LinkedHashMap<>();
+
+ 		for (String p : people) {
+ 			result = this.getSession()
+ 					.execute("SELECT * FROM projetBD.orderBD WHERE personid='" + p + "' ALLOW FILTERING");
+ 			result.forEach(r -> {
+ 				Object[] str = r.getSet("orderline", String.class).toArray();
+ 				for (int i = 0; i < str.length; i++) {
+ 					String strr = (String) str[i];
+ 					if (!topsellers.containsKey(strr))
+ 						topsellers.put(strr, 1);
+ 					else
+ 						topsellers.put(strr, topsellers.get(strr) + 1);
+ 				}
+ 			});
+ 		}
+
+ 		System.out.println("top 3 sellers:");
+ 		LinkedHashMap<String, Integer> sortedsell = this.sortMap(topsellers);
+ 		List<String> keys = new ArrayList<>(sortedsell.keySet());
+ 		for (int i = 0; i < 3; i++) {
+ 			if (i < keys.size())
+ 				System.out.println("Product " + keys.get(i) + " sold " + sortedsell.get(keys.get(i)) + " times.");
+ 		}
+ 	}
+
+ 	// Query 7. For the products of a given vendor with declining sales compare to
+ 	// the former quarter, analyze the reviews for these items to see if there are
+ 	// any negative sentiments.
+ 	public void query7() {
+
+ 		System.out.println("Query 7");
+
+ 		String brand = "Pirma";
+
+ 		System.out.println("Checking negative feedbacks of \"" + brand + "\"'s products:");
+
+ 		ResultSet result = this.getSession()
+ 				.execute("SELECT asin FROM projetBD.brandbyproduct where brand='" + brand + "' ALLOW FILTERING");
+ 		result.forEach(r -> {
+ 			System.out.println("Negative feedbacks for product " + r.getString(0));
+ 			ResultSet result2 = this.getSession()
+ 					.execute("SELECT * FROM projetBD.feedback WHERE asin='" + r.getString(0) + "' ALLOW FILTERING");
+ 			this.printNegativeFeedbacks(result2);
+ 		});
+ 	}
+
+ 	// Query 8. For all the products of a given category during a given year,
+ 	// compute its total sales amount, and measure its popularity in the social
+ 	// media.
+ 	public void query8() {
+ 		// toujours pas de categories :(
+ 	}
+
+ 	// Query 9. Find top-3 companies who have the largest amount of sales at one
+ 	// country, for each company, compare the number of the male and female
+ 	// customers, and return the most recent posts of them.
+ 	public void query9() {
+
+ 		System.out.println("Query 9");
+
+ 		String country = "Italy";
+
+ 		LinkedHashMap<String, Integer> topsellers = new LinkedHashMap<>();
+
+ 		ResultSet result = this.getSession()
+ 				.execute("SELECT vendor FROM projetBD.vendor where country='" + country + "' ALLOW FILTERING");
+
+ 		result.forEach(r -> {
+ 			String brand = r.getString(0);
+ 			topsellers.put(brand, 0);
+ 			ResultSet result2 = this.getSession()
+ 					.execute("SELECT asin FROM projetBD.brandbyproduct where brand='" + brand + "' ALLOW FILTERING");
+
+ 			result2.forEach(r2 -> {
+ 				String product = r2.getString(0);
+ 				int price = 0;
+
+ 				ResultSet result3 = this.getSession()
+ 						.execute("SELECT price FROM projetBD.product where asin='" + product + "' ALLOW FILTERING");
+
+ 				List<Row> rr = result3.all();
+ 				price = rr.get(0).getInt(0);
+
+ 				result3 = this.getSession().execute(
+ 						"SELECT * FROM projetBD.orderBD WHERE orderline CONTAINS'" + product + "' ALLOW FILTERING");
+
+ 				rr = result3.all();
+ 				for (int i = 0;i<rr.size();i++)
+ 					topsellers.put(brand, topsellers.get(brand) + price);
+ 			});
+ 		});
+
+ 		System.out.println("top 3 selling companies in " + country + ":");
+ 		LinkedHashMap<String, Integer> sortedsell = this.sortMap(topsellers);
+ 		List<String> keys = new ArrayList<>(sortedsell.keySet());
+ 		for (int i = 0; i < 3; i++) {
+ 			if (i < keys.size())
+ 				System.out.println("Product " + keys.get(i) + " sold " + sortedsell.get(keys.get(i)) + " times.");
+ 		}
+ 	}
+
+ 	// Query 10. Find the top-10 most active people by aggregating the posts during
+ 	// the last year, then calculate their RFM (Recency, Frequency, Monetary) value
+ 	// in the same period, and return their recent reviews and tags of interest.
+ 	public void query10() {
+
+ 		System.out.println("Query 10");
+
+ 		System.out.println("Top 10 active people on forums :");
+
+ 		ResultSet result = this.getSession()
+ 				.execute("SELECT personid, count(postid) FROM projetBD.post_hascreator_person GROUP BY personid");
+ 		
+ 		List<Row> resultAll = result.all();
+ 		for(int i = 0;i<10;i++)
+ 		System.out.println(
+ 				"Person " + resultAll.get(0).getString(0) + " published " + resultAll.get(i).getInt(1) + " posts.");
+
+ 		//RFM????
+ 	}
+    
+    private ArrayList<String> findCommonFriends(List<Row> all, List<Row> all2) {
+		ArrayList<String> res = new ArrayList<>();
+		for (Row r : all) {
+			for (Row r2 : all2) {
+				if (r.getString(0).equals(r2.getString(0)))
+					res.add(r.getString(0));
+			}
+		}
+		return res;
+	}
+
+	public LinkedHashMap<String, Integer> sortMap(LinkedHashMap<String, Integer> map) {
+		List<Entry<String, Integer>> capitalList = new LinkedList<>(map.entrySet());
+
+		// call the sort() method of Collections
+		Collections.sort(capitalList, (l1, l2) -> l2.getValue().compareTo(l1.getValue()));
+
+		// create a new map
+		LinkedHashMap<String, Integer> result = new LinkedHashMap<String, Integer>();
+
+		// get entry from list to the map
+		for (Entry<String, Integer> entry : capitalList) {
+			result.put(entry.getKey(), entry.getValue());
+		}
+
+		return result;
+	}
 
     private void printPostPerson(ResultSet result) {
         System.out.println("id | imagefile | creationDate | locationIP | browserUsed | language | content | length");
@@ -269,8 +469,6 @@ public class CassandraConnector {
         System.out.println(" personid | feedback");
         result.forEach(r -> {
             String rating = r.getString("feedback").split(",", 2)[0];
-            String feedback = r.getString("feedback").split(",", 2)[1];
-            //System.out.println("rating"+rating+" feedback "+feedback);
             if (rating.equals("'1.0"))
                 System.out.println(r.getString("personid") + " | " + r.getString("feedback"));
         });
