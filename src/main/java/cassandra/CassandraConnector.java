@@ -83,7 +83,7 @@ public class CassandraConnector {
 		this.printPeople(result);
 
 		System.out.println("Customer orders :");
-		result = this.getSession().execute("SELECT * FROM projetBD.order WHERE personid='" + customerid
+		result = this.getSession().execute("SELECT * FROM projetBD.orderBD WHERE personid='" + customerid
 				+ "' and orderdate > '2021-06-01' and orderdate < '2021-07-01'");
 		this.printOrders(result);
 
@@ -138,7 +138,7 @@ public class CassandraConnector {
 		});
 
 		System.out.println("Customers that bought the product :");
-		result = this.getSession().execute("SELECT * FROM projetBD.order WHERE orderline CONTAINS'" + productid
+		result = this.getSession().execute("SELECT * FROM projetBD.orderBD WHERE orderline CONTAINS'" + productid
 				+ "' AND orderdate > '" + startdate + "' AND orderdate < '" + enddate + "'");
 		System.out
 				.println("firstName | lastName | gender | birthday | creationDate | locationIP | browserUsed | place");
@@ -178,7 +178,7 @@ public class CassandraConnector {
 
 		System.out.println("Top 2 people sorted by most spending :");
 
-		ResultSet result = this.getSession().execute("SELECT personid, sum(totalprice) as sumtot FROM projetBD.order GROUP BY personid ORDER BY sumtot DESC");
+		ResultSet result = this.getSession().execute("SELECT personid, sum(totalprice) as sumtot FROM projetBD.orderBD GROUP BY personid ORDER BY sumtot DESC");
 		System.out.println("Customer " + result.all().get(0).getString(0) + " spent "
 				+ result.all().get(0).getDouble(0) + " total.");
 		
