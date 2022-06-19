@@ -52,30 +52,38 @@ public class CassandraConnector {
         CassandraConnector client = new CassandraConnector();
         client.connect("127.0.0.1", 9042);
 
-        // create keyspace
-        client.createKeySpace("projetBD", "SimpleStrategy", 1);
-        ResultSet result = client.getSession().execute("SELECT * FROM system_schema.keyspaces;");
+        switch (args[0]) {
+            case "create":
+                // create keyspace
+                client.createKeySpace("projetBD", "SimpleStrategy", 1);
+                ResultSet result = client.getSession().execute("SELECT * FROM system_schema.keyspaces;");
 
-        List<String> matchedKeyspaces = result.all().stream()
-                .filter(r -> r.getString(0).equals("projetBD".toLowerCase())).map(r -> r.getString(0))
-                .collect(Collectors.toList());
-
-        // ici on drop les tables, placer les String des tables à supprimer dans tableToDrop
-        //dropTables(client, "person","feedback","product","brandbyproduct","vendor","person_hasinterest_tag","person_knows_person","post","post_hascreator_person","post_hastag_tag","orderBD","invoice");
-        //dropTables(client, "post_hascreator_person");
-
-        System.out.println("\n\u001B[36m keyspaces: " + matchedKeyspaces.toString() + "\n\u001B[0m");
-
-        // creation des tables dans la BD si elles n'existent pas déjà
-
-        //createTables(client);
-
-        //deleteRows(client,"product"," asin IN ('B00KCPUHQU','B00KS73CPU')");
-
-        //insertRows(client, "feedback", new String[]{"asin", "PersonId", "feedback"}, new String[]{"LCJTMDF", "55551445256", "5.0, was very cool and fun to play with this"});
-
-        // interrogation des données
-        queriesSelect(client);
+                List<String> matchedKeyspaces = result.all().stream()
+                        .filter(r -> r.getString(0).equals("projetBD".toLowerCase())).map(r -> r.getString(0))
+                        .collect(Collectors.toList());
+                System.out.println("\n\u001B[36m keyspaces: " + matchedKeyspaces.toString() + "\n\u001B[0m");
+                createTables(client);
+                break;
+            case "drop":
+                // ici on drop les tables, placer les String des tables à supprimer dans tableToDrop
+                //dropTables(client, "post_hascreator_person");
+                dropTables(client, "person", "feedback", "product", "brandbyproduct", "vendor", "person_hasinterest_tag", "person_knows_person", "post", "post_hascreator_person", "post_hastag_tag", "orderBD", "invoice");
+                break;
+            case "delete":
+                deleteRows(client, "product", " asin IN ('B00KCPUHQU','B00KS73CPU')");
+                break;
+            case "insert":
+                insertRows(client, "feedback", new String[]{"asin", "PersonId", "feedback"}, new String[]{"LCJTMDF", "55551445256", "5.0, was very cool and fun to play with this"});
+                break;
+            case "update":
+                updateRows(client,"feedback","feedback='3.0, delivery late...I waited 1 month'","asin='B004EBLC76'");
+                break;
+            case "query":
+                queriesSelect(client,args[1]);
+                break;
+            default:
+                break;
+        }
         //close la connexion à cassandra
         client.close();
         System.exit(0);
@@ -100,14 +108,37 @@ public class CassandraConnector {
             ResultSet result;
             result = client.getSession().execute("SELECT COUNT(*) FROM projetBD." + table + ";");
             System.out.println("Nb d'enregistrements de la table " + table + ": " + result.one().getLong(0));
-            if (conditionWhere != "")
+            if (conditionWhere != ""){
+                System.out.println("DELETE FROM projetBD." + table + " WHERE " + conditionWhere + ";");
                 result = client.getSession().execute("DELETE FROM projetBD." + table + " WHERE " + conditionWhere + ";");
-            else
+            }
+            else{
                 result = client.getSession().execute("DELETE FROM projetBD." + table + ";");
+                System.out.println("DELETE FROM projetBD." + table + ";");
+            }
             System.out.println("Suppression s'est exécutée? result.wasApplied()=" + result.wasApplied());
             result = client.getSession().execute("SELECT COUNT(*) FROM projetBD." + table + ";");
             System.out.println("Nb d'enregistrements de la table après suppression " + table + ": " + result.one().getLong(0));
         } catch (InvalidQueryException exception) {
+            System.err.println("Table " + table + " n'existe pas OU erreur clause where: " + conditionWhere);
+        }
+    }
+
+    public static void updateRows(CassandraConnector client, String table, String set, String conditionWhere) {
+        System.out.println("\n\u001B[36m Dans update enregistrement(s) \n\u001B[0m");
+        try {
+            ResultSet result;
+            if (conditionWhere == ""){
+                System.out.println("pas de condition where "+ conditionWhere );
+                return;
+            }
+            else{
+                String row = "UPDATE projetBD." + table + " SET "+set+" WHERE "+conditionWhere+";";
+                result = client.getSession().execute(row);
+            }
+            System.out.println("Modification s'est exécutée? result.wasApplied()=" + result.wasApplied());
+        } catch (InvalidQueryException exception) {
+            System.err.println(exception);
             System.err.println("Table " + table + " n'existe pas OU erreur clause where: " + conditionWhere);
         }
     }
@@ -137,17 +168,41 @@ public class CassandraConnector {
         }
     }
 
-    public static void queriesSelect(CassandraConnector client) {
-        //client.query1();
-        //client.query2();
-        //client.query3();
-        //client.query4();
-        //client.query5();
-        //client.query6();
-        //client.query7();
-        //client.query8();
-        //client.query9();
-        client.query10();
+    public static void queriesSelect(CassandraConnector client, String arg) {
+        switch (arg) {
+            case "1":
+                client.query1();
+                break;
+            case "2":
+                client.query2();
+                break;
+            case "3":
+                client.query3();
+                break;
+            case "4":
+                client.query4();
+                break;
+            case "5":
+                client.query5();
+                break;
+            case "6":
+                client.query6();
+                break;
+            case "7":
+                client.query7();
+                break;
+            case "8":
+                client.query8();
+                break;
+            case "9":
+                client.query9();
+                break;
+            case "10":
+                client.query10();
+                break;
+            default :
+                break;
+        }
     }
 
     // Query 1. For a given customer, find his/her all related data including
@@ -213,7 +268,7 @@ public class CassandraConnector {
         ResultSet result = this.getSession().execute("SELECT * FROM projetBD.product WHERE asin='" + productid + "' ALLOW FILTERING");
         this.printProduct(result);
 
-        System.out.println("\n\u001B[32m Customer that fave feedback :\n\u001B[0m");
+        System.out.println("\n\u001B[32m Customer that gave feedback :\n\u001B[0m");
         result = this.getSession().execute("SELECT * FROM projetBD.feedback WHERE asin='" + productid + "' ALLOW FILTERING");
         System.out
                 .println("firstName | lastName | gender | birthday | createDate | locationIP | browserUsed | place");
@@ -268,10 +323,10 @@ public class CassandraConnector {
         System.out.println();
         List<Row> resultAll = result.all();
         System.out.println("Customer " + resultAll.get(0).getString(0) + " spent "
-                + resultAll.get(0).getDecimal(1) + " total.");
+                + resultAll.get(0).getDecimal(1) + "$ total.");
 
         System.out.println("Customer " + resultAll.get(1).getString(0) + " spent "
-                + resultAll.get(1).getDecimal(1) + " total.");
+                + resultAll.get(1).getDecimal(1) + "$ total.");
 
         this.printProduct(result);
 
@@ -296,7 +351,7 @@ public class CassandraConnector {
 
         System.out.println("\n\u001B[36m Dans Query 5 \u001B[0m");
 
-        System.out.println("\n\u001B[32m Pas de possibilité de retrouver des catégories : \n\u001B[0m");
+        System.out.println("\n\u001B[32m Pas de possibilité de retrouver des catégories :'( \n\u001B[0m");
     }
 
     // Query 6. Given customer 1 and customer 2, find persons in the shortest path
@@ -378,7 +433,7 @@ public class CassandraConnector {
     // media.
     public void query8() {
         System.out.println("\n\u001B[36m Dans Query 8 \u001B[0m");
-        System.out.println("\n\u001B[32m Pas de possibilité de retrouver des catégories : \n\u001B[0m");
+        System.out.println("\n\u001B[32m Pas de possibilité de retrouver des catégories :'( \n\u001B[0m");
     }
 
     // Query 9. Find top-3 companies who have the largest amount of sales at one
@@ -399,7 +454,7 @@ public class CassandraConnector {
 
         result.forEach(r -> {
             String brand = r.getString(0);
-            System.out.println("\n\u001B[32m Researching brand: " + brand+"\n\u001B[0m");
+            System.out.println("\n\u001B[32m Researching brand: " + brand + "\n\u001B[0m");
 
             topsellers.put(brand, 0);
             AtomicInteger female = new AtomicInteger();
@@ -433,9 +488,9 @@ public class CassandraConnector {
                     }
                 }
             });
-            double malePlusFemale=male.get() + female.get();
-            double percent= male.get() / malePlusFemale;
-            percent = percent *100;
+            double malePlusFemale = male.get() + female.get();
+            double percent = male.get() / malePlusFemale;
+            percent = percent * 100;
 
             maleFemale.put(brand, percent);
         });
@@ -447,9 +502,9 @@ public class CassandraConnector {
         List<String> keys = new ArrayList<>(sortedsell.keySet());
         for (int i = 0; i < 3; i++) {
             if (i < keys.size()) {
-                double malePerCent= maleFemale.get(keys.get(i));
+                double malePerCent = maleFemale.get(keys.get(i));
                 System.out.println("Company " + keys.get(i) + " sold " + sortedsell.get(keys.get(i)) + " $.");
-                System.out.println("they had a ratio of "+malePerCent+"% male and "+(100-malePerCent)+"% female customers");
+                System.out.println("they had a ratio of " + malePerCent + "% male and " + (100 - malePerCent) + "% female customers");
             }
         }
     }
@@ -468,8 +523,8 @@ public class CassandraConnector {
                 .execute("SELECT personid, count(postid) FROM projetBD.post_hascreator_person GROUP BY personid");
 
         List<Row> resultAll = result.all();
-        for (int i = 0; i < resultAll.size(); i++){
-            gensAvecLeurPost.put(resultAll.get(0).getString(0)+i,Math.toIntExact(resultAll.get(i).getLong(1)));
+        for (int i = 0; i < resultAll.size(); i++) {
+            gensAvecLeurPost.put(resultAll.get(0).getString(0) + i, Math.toIntExact(resultAll.get(i).getLong(1)));
             //System.out.println("Person " + resultAll.get(0).getString(0) + " published " + resultAll.get(i).getLong(1) + " posts.");
         }
         LinkedHashMap<String, Integer> sortedsell = this.sortMap(gensAvecLeurPost);
@@ -560,13 +615,13 @@ public class CassandraConnector {
             String rating = r.getString("feedback").split(",", 2)[0];
             if (rating.equals("'1.0")) {
                 if (b) {
-                    System.out.println("Negative feedbacks for product " + productName);
+                    System.out.println("\nNegative feedbacks for product " + productName);
                     System.out.println(" personid | feedback");
                 }
-                System.out.println(r.getString("personid") + " | " + r.getString("feedback"));
+                System.out.println(r.getString("personid") + " | " + r.getString("feedback")+"\n");
                 b = false;
             } else {
-                System.out.println("\u001B[31m No\u001B[0m negative feedbacks for product " + productName);
+                System.out.println("\u001B[33m No\u001B[0m negative feedbacks for product " + productName);
             }
         }
     }
