@@ -135,6 +135,7 @@ public class CassandraConnector {
             else{
                 String row = "UPDATE projetBD." + table + " SET "+set+" WHERE "+conditionWhere+";";
                 result = client.getSession().execute(row);
+                System.out.println(row);
             }
             System.out.println("Modification s'est exécutée? result.wasApplied()=" + result.wasApplied());
         } catch (InvalidQueryException exception) {
@@ -377,8 +378,6 @@ public class CassandraConnector {
                         + "' ALLOW FILTERING");
 
         ArrayList<String> people = this.findCommonFriends(result.all(), result2.all());
-        //people.add(customer1);
-        //people.add(customer2);
 
         System.out.println("\n\u001B[32m Common friends (1 hop) of customer " + customer1 + " and customer " + customer2 + ":\n\u001B[0m" + people + " \n");
 
